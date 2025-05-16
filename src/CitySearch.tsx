@@ -1,31 +1,54 @@
 import React, { useState } from 'react';
+import './CitySearch.css';
 
-const API_KEY = 'be61ea39971b82e35e204c4252d8c13e'; 
+const API_KEY = 'be61ea39971b82e35e204c4252d8c13e';
 
 interface Props {
   onInputChange: (city: string) => void;
 }
 
+interface CitySuggestion {
+  name: string;
+}
+
 const CitySearch: React.FC<Props> = ({ onInputChange }) => {
   const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleInputChange = async (text: string) => {
+    if (text.length >= 3) {
+      try {
+        const response = await fetch(
+          `https://api.openweathermap.org/geo/1.0/direct?q=${text}&limit=10&appid=${API_KEY}`
+        );
+        const data = await response.json();
+
+        const uniqueCities = new Map<string, CitySuggestion>();
+
+        data.forEach((item: any) => {
+          const key = `${item.name},${item.country}`;
+          const matches = item.name.toLowerCase().startsWith(text.toLowerCase());
+          if (matches && !uniqueCities.has(key)) {
+            uniqueCities.set(key, { name: item.name });
+          }
+        });
+        
+
+        setSuggestions(Array.from(uniqueCities.values()));
+      } catch (error) {
+        console.error('Ошибка при получении подсказок:', error);
+        setSuggestions([]);
+      }
+    } else {
+      setSuggestions([]);
+    }
+  };
 
   const fetchSuggestions = async (text: string) => {
-    if (!text) {
-      setSuggestions([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `https://api.openweathermap.org/geo/1.0/direct?q=${text}&limit=5&appid=${API_KEY}`
-      );
-      if (!response.ok) throw new Error('Ошибка при загрузке');
-      const data = await response.json();
-      const names = data.map((item: any) => `${item.name}, ${item.country}`);
-      setSuggestions(names);
-    } catch (error) {
-      console.error('Ошибка загрузки подсказок:', error);
+    if (text.length >= 3) {
+      await handleInputChange(text);
+    } else {
       setSuggestions([]);
     }
   };
@@ -34,50 +57,37 @@ const CitySearch: React.FC<Props> = ({ onInputChange }) => {
     const value = e.target.value;
     setQuery(value);
     fetchSuggestions(value);
-    onInputChange(value); // Обновляем значение в родителе
+    onInputChange(value);
   };
 
   const handleSelect = (city: string) => {
     setQuery(city);
     setSuggestions([]);
-    onInputChange(city); // Передаём выбранный город
+    onInputChange(city);
   };
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div
+      className="city-search"
+      onMouseEnter={() => setShowSuggestions(true)}
+      onMouseLeave={() => setShowSuggestions(false)}
+    >
       <input
         type="text"
-        placeholder="Введите город"
         value={query}
         onChange={handleChange}
-        style={{ width: '200px', padding: '6px' }}
+        placeholder="Введите город"
+        onFocus={() => setShowSuggestions(true)}
       />
-      {suggestions.length > 0 && (
-        <ul
-          style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: '4px 0',
-            position: 'absolute',
-            width: '200px',
-            maxHeight: '150px',
-            overflowY: 'auto',
-            backgroundColor: 'white',
-            border: '1px solid #ccc',
-            zIndex: 100,
-          }}
-        >
-          {suggestions.map((city, idx) => (
+
+      {showSuggestions && suggestions.length > 0 && (
+        <ul className="suggestions-list">
+          {suggestions.map((city, index) => (
             <li
-              key={idx}
-              onClick={() => handleSelect(city)}
-              style={{
-                padding: '6px 10px',
-                cursor: 'pointer',
-              }}
-              onMouseDown={(e) => e.preventDefault()} // Чтобы не терять фокус input при клике
+              key={index}
+              onClick={() => handleSelect(`${city.name}`)}
             >
-              {city}
+              {city.name}
             </li>
           ))}
         </ul>

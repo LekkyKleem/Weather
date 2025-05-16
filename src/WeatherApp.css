@@ -16,6 +16,7 @@ body{
   padding: 20px;
 }
 
+
 #header {
   display: flex;
   justify-content: space-between;
@@ -24,6 +25,14 @@ body{
   background-color: #eef2f3;
   flex-wrap: wrap;
   animation: SlideUpDown 0.8s ease-in-out;
+}
+
+.weather{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
 
@@ -137,6 +146,7 @@ body{
 .forecast-cards {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .forecast-card {
